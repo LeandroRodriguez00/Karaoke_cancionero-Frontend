@@ -21,6 +21,7 @@ import SearchBox from './components/SearchBox'
 import GroupedSongList from './components/GroupedSongList'
 import FullSongVirtualList from './components/FullSongVirtualList'
 import ScrollTopFab from './components/ScrollTopFab'
+import WelcomeModal, { shouldShowWelcome } from './components/WelcomeModal'
 
 import { normalizeText } from './utils/normalize'
 import { useDebounce } from './hooks/useDebounce'
@@ -45,6 +46,9 @@ export default function App() {
   const [songs, setSongs] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Welcome modal: se muestra una sola vez por dispositivo
+  const [welcomeOpen, setWelcomeOpen] = useState(shouldShowWelcome())
 
   // Aplicar resultados en baja prioridad (no bloquea tipeo)
   const [isPending, startTransition] = useTransition()
@@ -88,13 +92,13 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Container>
-        {/* Hero (sin CTA extra) */}
+        {/* Hero centrado */}
         <Box sx={{ py: { xs: 4, md: 6 } }}>
-          <Stack spacing={1}>
-            <Typography variant="h2" gutterBottom>
-              Cancionero Karaoke
+          <Stack spacing={1} alignItems="center" sx={{ textAlign: 'center' }}>
+            <Typography variant="h2" gutterBottom align="center">
+              Karaoke
             </Typography>
-            <Typography variant="h6" sx={{ opacity: 0.85 }}>
+            <Typography variant="h6" sx={{ opacity: 0.85 }} align="center">
               Buscá tu tema y ¡pedilo al toque!
             </Typography>
           </Stack>
@@ -139,6 +143,9 @@ export default function App() {
 
         {/* Botón flotante "Volver arriba" */}
         <ScrollTopFab showAt={280} />
+
+        {/* Modal de bienvenida (solo 1 vez por dispositivo) */}
+        <WelcomeModal open={welcomeOpen} onClose={() => setWelcomeOpen(false)} />
       </Container>
     </ThemeProvider>
   )
