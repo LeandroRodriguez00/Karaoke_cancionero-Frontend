@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState, useTransition, useDeferredValue, useCallback } from 'react'
+import { useEffect, useMemo, useState, useTransition, useDeferredValue } from 'react'
 import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
 import Container from '@mui/material/Container'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
-import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import ToggleButton from '@mui/material/ToggleButton'
@@ -14,7 +13,6 @@ import ListItem from '@mui/material/ListItem'
 import ListItemText from '@mui/material/ListItemText'
 import Skeleton from '@mui/material/Skeleton'
 import QueueMusicIcon from '@mui/icons-material/QueueMusic'
-import RequestPageIcon from '@mui/icons-material/RequestPage'
 
 import theme from './theme'
 import './styles.css'
@@ -22,7 +20,7 @@ import './styles.css'
 import SearchBox from './components/SearchBox'
 import GroupedSongList from './components/GroupedSongList'
 import FullSongVirtualList from './components/FullSongVirtualList'
-import ScrollTopFab from './components/ScrollTopFab' // ⬅️ nuevo
+import ScrollTopFab from './components/ScrollTopFab'
 
 import { normalizeText } from './utils/normalize'
 import { useDebounce } from './hooks/useDebounce'
@@ -55,11 +53,6 @@ export default function App() {
 
   const normalizedQuery = useMemo(() => normalizeText(debounced), [debounced])
 
-  const handleSongClick = useCallback((s) => {
-    // Etapa 4: abrir modal y prellenar artist/title
-    alert(`(Etapa 4) Pedir: ${s.artist} — ${s.title}`)
-  }, [])
-
   useEffect(() => {
     let active = true
     const controller = new AbortController()
@@ -74,7 +67,6 @@ export default function App() {
           signal: controller.signal,
         })
         if (!active) return
-        // Aplicamos los items en baja prioridad
         startTransition(() => { setSongs(items) })
       } catch (err) {
         if (active && err.name !== 'AbortError') setError('No se pudo cargar el cancionero')
@@ -96,29 +88,19 @@ export default function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Container>
-        {/* Hero */}
+        {/* Hero (sin CTA extra) */}
         <Box sx={{ py: { xs: 4, md: 6 } }}>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={3} alignItems="center" justifyContent="space-between">
-            <Box>
-              <Typography variant="h2" gutterBottom>
-                Cancionero Karaoke
-              </Typography>
-              <Typography variant="h6" sx={{ opacity: 0.85 }}>
-                Buscá tu tema y ¡pedilo al toque!
-              </Typography>
-            </Box>
-            <Button
-              size="large"
-              variant="contained"
-              startIcon={<RequestPageIcon />}
-              onClick={() => alert('Próximamente (Etapa 4): formulario "Pedí tu canción"')}
-            >
-              Pedí tu canción
-            </Button>
+          <Stack spacing={1}>
+            <Typography variant="h2" gutterBottom>
+              Cancionero Karaoke
+            </Typography>
+            <Typography variant="h6" sx={{ opacity: 0.85 }}>
+              Buscá tu tema y ¡pedilo al toque!
+            </Typography>
           </Stack>
         </Box>
 
-        {/* Buscador + Toggle de vista */}
+        {/* Botones + Buscador + Toggle de vista */}
         <Paper elevation={0} sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider' }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="center">
             <Box sx={{ flex: 1 }}>
@@ -143,19 +125,9 @@ export default function App() {
           ) : showLoading ? (
             <LoadingList />
           ) : view === 'grouped' ? (
-            <GroupedSongList
-              songs={deferredSongs}
-              // no pasamos 'loading' aquí para evitar renders extra
-              onSongClick={handleSongClick}
-            />
+            <GroupedSongList songs={deferredSongs} />
           ) : (
-            <FullSongVirtualList
-              songs={deferredSongs}
-              // si tu FullSongVirtualList usa loading, podrías pasar false
-              loading={false}
-              height={600}
-              onSongClick={handleSongClick}
-            />
+            <FullSongVirtualList songs={deferredSongs} loading={false} height={600} />
           )}
         </Box>
 
@@ -166,7 +138,7 @@ export default function App() {
         </Box>
 
         {/* Botón flotante "Volver arriba" */}
-        <ScrollTopFab threshold={280} />
+        <ScrollTopFab showAt={280} />
       </Container>
     </ThemeProvider>
   )

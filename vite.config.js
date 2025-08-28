@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'node:url'
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '') // lee .env y .env.* (solo claves VITE_* se inyectan)
+  // Lee .env y .env.* (sólo VITE_* se inyecta al cliente)
+  const env = loadEnv(mode, process.cwd(), '')
   const API_ORIGIN = env.VITE_API_ORIGIN || 'http://localhost:4000'
 
   return {
@@ -17,11 +18,12 @@ export default defineConfig(({ mode }) => {
     },
 
     server: {
-      host: true,        // accesible desde la LAN (probar en el celu)
+      host: true,        // accesible desde la LAN
       port: 5173,
-      strictPort: true,  // no salta de puerto silenciosamente
-      open: true,        // abre el navegador al arrancar
+      strictPort: true,  // no salta de puerto
+      open: true,        // abre el navegador
       proxy: {
+        // Útil si alguna parte del front usa rutas relativas (/api)
         '/api': {
           target: API_ORIGIN,
           changeOrigin: true,
@@ -35,7 +37,8 @@ export default defineConfig(({ mode }) => {
       },
     },
 
-    // Para "vite preview" (simula prod local) manteniendo el proxy
+    // Nota: en algunas versiones de Vite, preview.proxy puede no aplicarse.
+    // No afecta porque http.js usa VITE_API_ORIGIN absoluto.
     preview: {
       port: 4173,
       strictPort: true,
@@ -45,8 +48,9 @@ export default defineConfig(({ mode }) => {
       },
     },
 
-    // Opcional: sourcemaps en build para depurar (comentá si no los querés)
+    // (Opcional) Sourcemaps en build para depurar
     // build: { sourcemap: true },
+
     define: {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
     },

@@ -17,21 +17,14 @@ import ToggleButton from '@mui/material/ToggleButton'
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import ExpandLess from '@mui/icons-material/ExpandLess'
 import ExpandMore from '@mui/icons-material/ExpandMore'
+import SongActionModal from '@/components/SongActionModal'
 
-/** Normaliza string para agrupar (case/tildes/espacios) */
 const norm = (s = '') =>
   s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 
-/** Iniciales del artista para Avatar */
 const initials = (name = '') =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(p => p[0]?.toUpperCase() || '')
-    .join('')
+  name.split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('')
 
-/** Agrupa por artista robusto */
 function groupByArtist(songs = []) {
   const byKey = new Map()
   for (const s of songs) {
@@ -49,7 +42,6 @@ function groupByArtist(songs = []) {
   return groups
 }
 
-/** Índice A–Z: primera aparición de cada letra en los grupos */
 const LETTERS = ['#','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
 function useLetterIndex(groups){
   return useMemo(() => {
@@ -64,11 +56,7 @@ function useLetterIndex(groups){
   }, [groups])
 }
 
-function GroupedSongList({
-  songs,
-  onSongClick,
-  chipLimit = 3,
-}) {
+function GroupedSongList({ songs, chipLimit = 3 }) {
   const theme = useTheme()
   const primary = theme.palette.primary.main
 
@@ -76,6 +64,11 @@ function GroupedSongList({
   const allKeys = useMemo(() => groups.map(g => g.artist), [groups])
   const letterIndex = useLetterIndex(groups)
   const [openSet, setOpenSet] = useState(new Set())
+
+  // NEW: estado para el chooser
+  const [chooser, setChooser] = useState({ open: false, song: null })
+  const openChooser = (song) => setChooser({ open: true, song })
+  const closeChooser = () => setChooser({ open: false, song: null })
 
   useEffect(() => {
     if (groups.length > 0 && groups.length <= 5) setOpenSet(new Set(allKeys))
@@ -107,7 +100,7 @@ function GroupedSongList({
 
   return (
     <>
-      {/* Barra A–Z sticky + acciones */}
+      {/* Barra A–Z + acciones */}
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={1}
@@ -115,16 +108,13 @@ function GroupedSongList({
         sx={{
           mb: 1,
           position: 'sticky',
-          top: 0, // si tenés AppBar fijo, cambiá a { xs: 56, sm: 64 }
+          top: 0,
           zIndex: (t) => t.zIndex.appBar,
           bgcolor: 'background.default',
           borderBottom: '1px solid',
           borderColor: 'divider',
           pt: 1,
           pb: 1,
-          // Elegante: blur/transparencia (opcional)
-          // backdropFilter: 'saturate(160%) blur(6px)',
-          // backgroundColor: (t) => alpha(t.palette.background.default, 0.9),
         }}
       >
         <ToggleButtonGroup
@@ -184,13 +174,7 @@ function GroupedSongList({
                 </ListItemButton>
 
                 <Collapse in={isOpen} timeout="auto" unmountOnExit>
-                  <List
-                    id={`panel-${norm(g.artist)}`}
-                    component="div"
-                    disablePadding
-                    dense
-                    sx={{ bgcolor: alpha(primary, 0.03) }}
-                  >
+                  <List id={`panel-${norm(g.artist)}`} component="div" disablePadding dense sx={{ bgcolor: alpha(primary, 0.03) }}>
                     {g.songs.map((s, i) => {
                       const key = s._id || `${s.artist}-${s.title}-${i}`
                       const stylesArr = Array.isArray(s.styles) ? s.styles.filter(Boolean) : []
@@ -204,9 +188,7 @@ function GroupedSongList({
                                 alignItems: 'flex-start',
                                 borderLeft: `3px solid ${alpha(primary, 0.25)}`
                               }}
-                              onClick={() =>
-                                (onSongClick ? onSongClick(s) : alert(`Elegiste: ${s.artist} — ${s.title}`))
-                              }
+                              onClick={() => openChooser({ artist: g.artist, title: s.title })}
                             >
                               <ListItemText
                                 primary={s.title}
@@ -239,9 +221,11 @@ function GroupedSongList({
           )
         })}
       </List>
+
+      {/* Modal de acciones rápidas */}
+      <SongActionModal open={chooser.open} song={chooser.song} onClose={closeChooser} />
     </>
   )
 }
 
-// ⬇️ Evita renders si songs/onSongClick/chipLimit no cambian
 export default React.memo(GroupedSongList)
