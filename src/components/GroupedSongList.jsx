@@ -9,11 +9,12 @@ import ListItemText from '@mui/material/ListItemText'
 import Collapse from '@mui/material/Collapse'
 import Divider from '@mui/material/Divider'
 import Typography from '@mui/material/Typography'
-import Skeleton from '@mui/material/Skeleton'
 import Stack from '@mui/material/Stack'
 import Button from '@mui/material/Button'
 import Avatar from '@mui/material/Avatar'
 import Chip from '@mui/material/Chip'
+import ToggleButton from '@mui/material/ToggleButton'
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup'
 import ExpandLess from '@mui/icons-material/ExpandLess'
 import ExpandMore from '@mui/icons-material/ExpandMore'
 
@@ -48,9 +49,23 @@ function groupByArtist(songs = []) {
   return groups
 }
 
-export default function GroupedSongList({
+/** Índice A–Z: primera aparición de cada letra en los grupos */
+const LETTERS = ['#','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
+function useLetterIndex(groups){
+  return useMemo(() => {
+    const idx = new Map()
+    for (const g of groups) {
+      const n = norm(g.artist)
+      const first = (n[0]?.toUpperCase()) || '#'
+      const letter = /^[A-Z]$/.test(first) ? first : '#'
+      if (!idx.has(letter)) idx.set(letter, g.artist)
+    }
+    return idx
+  }, [groups])
+}
+
+function GroupedSongList({
   songs,
-  loading,
   onSongClick,
   chipLimit = 3,
 }) {
@@ -59,6 +74,7 @@ export default function GroupedSongList({
 
   const groups = useMemo(() => groupByArtist(songs), [songs])
   const allKeys = useMemo(() => groups.map(g => g.artist), [groups])
+  const letterIndex = useLetterIndex(groups)
   const [openSet, setOpenSet] = useState(new Set())
 
   useEffect(() => {
@@ -76,17 +92,14 @@ export default function GroupedSongList({
   const expandAll = useCallback(() => setOpenSet(new Set(allKeys)), [allKeys])
   const collapseAll = useCallback(() => setOpenSet(new Set()), [])
 
-  if (loading) {
-    return (
-      <List dense>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <ListItem key={i}>
-            <ListItemText primary={<Skeleton width="45%" />} secondary={<Skeleton width="25%" />} />
-          </ListItem>
-        ))}
-      </List>
-    )
-  }
+  const onJump = useCallback((_, letter) => {
+    if (!letter) return
+    const artist = letterIndex.get(letter)
+    if (!artist) return
+    const el = document.getElementById(`anchor-${norm(artist)}`)
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setOpenSet(prev => new Set(prev).add(artist))
+  }, [letterIndex])
 
   if (!groups.length) {
     return <Typography variant="body2" sx={{ opacity: 0.7, mt: 2 }}>No hay resultados.</Typography>
@@ -94,9 +107,41 @@ export default function GroupedSongList({
 
   return (
     <>
-      <Stack direction="row" spacing={1} sx={{ mb: 1 }} justifyContent="flex-end">
-        <Button size="small" variant="outlined" onClick={expandAll}>Expandir todo</Button>
-        <Button size="small" variant="outlined" onClick={collapseAll}>Colapsar todo</Button>
+      {/* Barra A–Z sticky + acciones */}
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1}
+        alignItems="center"
+        sx={{
+          mb: 1,
+          position: 'sticky',
+          top: 0, // si tenés AppBar fijo, cambiá a { xs: 56, sm: 64 }
+          zIndex: (t) => t.zIndex.appBar,
+          bgcolor: 'background.default',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          pt: 1,
+          pb: 1,
+          // Elegante: blur/transparencia (opcional)
+          // backdropFilter: 'saturate(160%) blur(6px)',
+          // backgroundColor: (t) => alpha(t.palette.background.default, 0.9),
+        }}
+      >
+        <ToggleButtonGroup
+          exclusive
+          size="small"
+          onChange={onJump}
+          sx={{ flexWrap:'wrap', gap:0.5, mr:'auto' }}
+        >
+          {LETTERS.map(l => (
+            <ToggleButton key={l} value={l} disabled={!letterIndex.has(l)}>{l}</ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+
+        <Stack direction="row" spacing={1}>
+          <Button size="small" variant="outlined" onClick={expandAll}>Expandir todo</Button>
+          <Button size="small" variant="outlined" onClick={collapseAll}>Colapsar todo</Button>
+        </Stack>
       </Stack>
 
       <List component="div" sx={{ width: '100%', bgcolor: 'transparent' }} disablePadding>
@@ -105,9 +150,8 @@ export default function GroupedSongList({
           const headerBg = isOpen ? alpha(primary, 0.08) : 'transparent'
 
           return (
-            <Box key={g.artist} sx={{ mb: 1.25 }}>
+            <Box key={g.artist} sx={{ mb: 1.25 }} id={`anchor-${norm(g.artist)}`}>
               <Paper variant="outlined" sx={{ borderRadius: 2, overflow: 'hidden' }}>
-                {/* Header artista bien diferenciado */}
                 <ListItemButton
                   onClick={() => toggle(g.artist)}
                   sx={{
@@ -139,7 +183,6 @@ export default function GroupedSongList({
                   {isOpen ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
 
-                {/* Canciones envueltas con fondo suave e indent */}
                 <Collapse in={isOpen} timeout="auto" unmountOnExit>
                   <List
                     id={`panel-${norm(g.artist)}`}
@@ -199,3 +242,6 @@ export default function GroupedSongList({
     </>
   )
 }
+
+// ⬇️ Evita renders si songs/onSongClick/chipLimit no cambian
+export default React.memo(GroupedSongList)
