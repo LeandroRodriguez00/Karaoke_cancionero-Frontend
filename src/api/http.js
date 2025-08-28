@@ -1,5 +1,6 @@
 // client/src/api/http.js
-const API_ORIGIN = import.meta.env.VITE_API_ORIGIN || 'http://localhost:4000'
+const RAW_ORIGIN = import.meta.env.VITE_API_ORIGIN || 'http://localhost:4000'
+export const API_ORIGIN = RAW_ORIGIN.replace(/\/+$/, '') // sin trailing slash
 
 export class ApiError extends Error {
   constructor(message, { status, data, url, method } = {}) {
@@ -12,7 +13,7 @@ export class ApiError extends Error {
   }
 }
 
-function qs(params) {
+export function qs(params) {
   if (!params || typeof params !== 'object') return ''
   const sp = new URLSearchParams()
   Object.entries(params).forEach(([k, v]) => {
@@ -23,18 +24,47 @@ function qs(params) {
   return s ? `?${s}` : ''
 }
 
-async function request(method, path, { body, headers, timeoutMs = 10000, credentials = 'omit' } = {}) {
+function adminHeaders() {
+  const key = localStorage.getItem('ADMIN_KEY') || ''
+  return key ? { 'x-admin-key': key } : {}
+}
+
+/**
+ * request(method, path, opts)
+ * opts:
+ *   - body        : string | undefined (ya serializada si es JSON)
+ *   - headers     : object headers extra
+ *   - timeoutMs   : number (default 10000)
+ *   - credentials : 'omit' | 'same-origin' | 'include' (default 'include')
+ *   - admin       : boolean (si true, inyecta x-admin-key automáticamente)
+ *   - query       : object (se convierte a ?a=1&b=2)
+ */
+async function request(
+  method,
+  path,
+  { body, headers, timeoutMs = 10000, credentials = 'include', admin = false, query } = {}
+) {
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-  const url = `${API_ORIGIN}${path}`
+
+  // normalización de URL
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  const q = query ? qs(query) : ''
+  const url = `${API_ORIGIN}${cleanPath}${q}`
 
   try {
+    const finalHeaders = {
+      Accept: 'application/json',
+      ...(admin ? adminHeaders() : {}),
+      ...(headers || {}),
+    }
+
     const res = await fetch(url, {
       method,
-      headers: { Accept: 'application/json', ...(headers || {}) },
+      headers: finalHeaders,
       body,
       signal: controller.signal,
-      credentials, // usa 'include' si algún día manejás cookies
+      credentials, // usamos include por defecto (no molesta si no hay cookies)
     })
 
     const ct = res.headers.get('content-type') || ''
@@ -54,7 +84,6 @@ async function request(method, path, { body, headers, timeoutMs = 10000, credent
     if (err?.name === 'AbortError') {
       throw new ApiError('Tiempo de espera agotado', { status: 0, url, method })
     }
-    // Reempaquetar otros errores de red como ApiError para manejo homogéneo
     if (!(err instanceof ApiError)) {
       throw new ApiError(err.message || 'Error de red', { status: 0, url, method })
     }
@@ -69,18 +98,48 @@ export function getJSON(path, opts = {}) {
 }
 
 export function getJSONQ(path, params = {}, opts = {}) {
-  return getJSON(`${path}${qs(params)}`, opts)
+  return getJSON(path, { ...opts, query: params })
 }
 
 export function postJSON(path, data, opts = {}) {
   return request('POST', path, {
     body: JSON.stringify(data ?? {}),
     headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
-    ...opts,
+    admin: !!opts.admin,
+    timeoutMs: opts.timeoutMs,
+    credentials: opts.credentials ?? 'include',
+    query: opts.query,
   })
 }
 
-// (Opcional, pensando en el Admin de la Etapa 5)
-// export const putJSON   = (p,d,o={}) => request('PUT',   p, { body: JSON.stringify(d??{}), headers:{'Content-Type':'application/json',...(o.headers||{})}, ...o })
-// export const patchJSON = (p,d,o={}) => request('PATCH', p, { body: JSON.stringify(d??{}), headers:{'Content-Type':'application/json',...(o.headers||{})}, ...o })
-// export const delJSON   = (p,o={})   => request('DELETE',p, o)
+export function putJSON(path, data, opts = {}) {
+  return request('PUT', path, {
+    body: JSON.stringify(data ?? {}),
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    admin: !!opts.admin,
+    timeoutMs: opts.timeoutMs,
+    credentials: opts.credentials ?? 'include',
+    query: opts.query,
+  })
+}
+
+export function patchJSON(path, data, opts = {}) {
+  return request('PATCH', path, {
+    body: JSON.stringify(data ?? {}),
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+    admin: !!opts.admin,
+    timeoutMs: opts.timeoutMs,
+    credentials: opts.credentials ?? 'include',
+    query: opts.query,
+  })
+}
+
+export function delJSON(path, opts = {}) {
+  return request('DELETE', path, {
+    headers: { ...(opts.headers || {}) },
+    admin: !!opts.admin,
+    timeoutMs: opts.timeoutMs,
+    credentials: opts.credentials ?? 'include',
+    query: opts.query,
+  })
+}

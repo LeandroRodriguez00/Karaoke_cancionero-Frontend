@@ -1,3 +1,4 @@
+// client/vite.config.js
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { fileURLToPath, URL } from 'node:url'
@@ -13,7 +14,7 @@ export default defineConfig(({ mode }) => {
     // Imports cortos: "@/components/..."
     resolve: {
       alias: {
-        '@': fileURLToPath(new URL('./src', import.meta.url)),
+        '@': fileURLToPath(new URL('./src', import.meta.url)), // ✅ @ → src
       },
     },
 
@@ -23,22 +24,23 @@ export default defineConfig(({ mode }) => {
       strictPort: true,  // no salta de puerto
       open: true,        // abre el navegador
       proxy: {
-        // Útil si alguna parte del front usa rutas relativas (/api)
+        // Proxy para API REST
         '/api': {
           target: API_ORIGIN,
           changeOrigin: true,
         },
-        // Listo para Socket.IO (Etapa 5)
+        // Proxy + WS para Socket.IO (Etapa 5)
         '/socket.io': {
           target: API_ORIGIN,
           changeOrigin: true,
           ws: true,
         },
       },
+      // Si no querés overlay de errores, podés descomentar:
+      // hmr: { overlay: false },
     },
 
-    // Nota: en algunas versiones de Vite, preview.proxy puede no aplicarse.
-    // No afecta porque http.js usa VITE_API_ORIGIN absoluto.
+    // Preview (build local) — no siempre aplica proxy, pero lo dejamos igual
     preview: {
       port: 4173,
       strictPort: true,
@@ -48,8 +50,10 @@ export default defineConfig(({ mode }) => {
       },
     },
 
-    // (Opcional) Sourcemaps en build para depurar
-    // build: { sourcemap: true },
+    // Pequeña optimización de dev: prebundle del cliente de sockets
+    optimizeDeps: {
+      include: ['socket.io-client'],
+    },
 
     define: {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
