@@ -92,9 +92,12 @@ export default function AdminQueue() {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [confirmText, setConfirmText] = useState('')
 
-  // Cola de toasts agrupados
+  // 🔔 Cola de toasts agrupados
   const newToastCountRef = useRef(0)
   const toastTimerRef = useRef(null)
+
+  // 🗑️ Modal de confirmación para eliminar un pedido
+  const [deleteDlg, setDeleteDlg] = useState({ open: false, item: null, busy: false })
 
   const notify = (msg, sev = 'info') => setSnack({ open: true, msg, sev })
 
@@ -205,16 +208,29 @@ export default function AdminQueue() {
     }
   }
 
-  const deleteOne = async (r) => {
+  // Abre modal de confirmación para eliminar un pedido (reemplaza window.confirm)
+  const deleteOne = (r) => {
+    setDeleteDlg({ open: true, item: r, busy: false })
+  }
+
+  const confirmDeleteOne = async () => {
+    const r = deleteDlg.item
+    if (!r) return
     const rid = r._id || r.id
-    const ok = window.confirm(`¿Eliminar el pedido de "${r.fullName}" — ${r.artist} • ${r.title}?`)
-    if (!ok) return
     try {
+      setDeleteDlg((d) => ({ ...d, busy: true }))
       await delJSON(`/api/admin/requests/${rid}`, { admin: true })
       // El server emite request:delete → el listener ajusta la lista
+      setDeleteDlg({ open: false, item: null, busy: false })
     } catch (e) {
       notify(e.message || 'No se pudo eliminar', 'error')
+      setDeleteDlg((d) => ({ ...d, busy: false }))
     }
+  }
+
+  const cancelDeleteOne = () => {
+    if (deleteDlg.busy) return
+    setDeleteDlg({ open: false, item: null, busy: false })
   }
 
   const deleteAll = async () => {
@@ -231,6 +247,8 @@ export default function AdminQueue() {
   const Counter = ({ label, value }) => (
     <Chip label={`${label}: ${value ?? 0}`} sx={{ mr: 1 }} />
   )
+
+  const itemToDelete = deleteDlg.item || {}
 
   return (
     <Container maxWidth="xl">
@@ -447,6 +465,33 @@ export default function AdminQueue() {
             onClick={deleteAll}
           >
             Eliminar todo
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Confirmación ELIMINAR UNO */}
+      <Dialog open={deleteDlg.open} onClose={cancelDeleteOne}>
+        <DialogTitle>Eliminar pedido</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 1.5 }}>
+            ¿Seguro que querés eliminar el pedido de{' '}
+            <b>{itemToDelete.fullName || '—'}</b> — {itemToDelete.artist || '—'} • {itemToDelete.title || '—'}?
+            <br />
+            Esta acción no se puede deshacer.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelDeleteOne} disabled={deleteDlg.busy} autoFocus>
+            Cancelar
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            startIcon={<DeleteOutlineIcon />}
+            disabled={deleteDlg.busy}
+            onClick={confirmDeleteOne}
+          >
+            {deleteDlg.busy ? 'Eliminando…' : 'Eliminar'}
           </Button>
         </DialogActions>
       </Dialog>

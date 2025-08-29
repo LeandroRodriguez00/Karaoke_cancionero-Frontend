@@ -14,7 +14,7 @@ export default function Home() {
       </Typography>
 
       <Typography variant="subtitle1" color="text.secondary" sx={{ textAlign: 'center' }}>
-        Elegí si la cantás vos o si querés que la cante el cantante 🎤
+        Elegí si la cantás vos o si querés sugerir que la cante el cantante 🎤
       </Typography>
 
       <Button
@@ -24,7 +24,7 @@ export default function Home() {
         onClick={() => openHost()}               // formulario vacío (canta el host)
         sx={{ borderRadius: 9999, px: 2.5, fontWeight: 700 }}
       >
-        Pedir al cantante que cante una canción
+        Sugerir al cantante que cante una canción
       </Button>
     </Stack>
   )

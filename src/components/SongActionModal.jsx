@@ -59,7 +59,7 @@ export default function SongActionModal({ open, onClose, song }) {
             onClick={chooseHost}
             disabled={disabled}
           >
-            Pedile al cantante
+            Sugerirle al cantante
           </Button>
         </Stack>
       </DialogContent>

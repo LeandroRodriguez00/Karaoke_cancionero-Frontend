@@ -66,7 +66,7 @@ export default function SearchBox({ value, onChange, autoFocus = true, onClear }
           onClick={() => openHost()} // formulario vacío (canta el host)
           sx={{ borderRadius: 9999, px: 2.5, fontWeight: 700, alignSelf: { xs: 'stretch', md: 'auto' } }}
         >
-          Pedir al cantante que cante una canción
+          Sugerir al cantante que cante una canción
         </Button>
       </Stack>
 

@@ -104,7 +104,7 @@ export default function RequestModal({
     if (e.key === 'Enter' && !disabled) { e.preventDefault(); handleSubmit() }
   }
 
-  const titleText = defaultPerformer === 'host' ? 'Pedile al cantante' : 'Pedí tu canción'
+  const titleText = defaultPerformer === 'host' ? 'Sugerirle al cantante' : 'Pedí tu canción'
 
   // Estilo para inputs "filled" (sin depender del theme)
   const filledStyle = {
