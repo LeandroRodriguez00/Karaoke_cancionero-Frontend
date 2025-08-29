@@ -1,10 +1,20 @@
-node_modules/
+# --- Build output ---
 dist/
 
+# --- Dependencies ---
+node_modules/
+
+# --- Env locales (no commitear) ---
 .env
-.env.*.local
+.env.*
+# Re-incluir SOLO las plantillas (sí se commitean)
+!.env.example
+!.env.production.example
+
+# --- Overrides locales ---
 *.local
 
+# --- Basura de SO/editores ---
 .DS_Store
 Thumbs.db
 .vscode/
